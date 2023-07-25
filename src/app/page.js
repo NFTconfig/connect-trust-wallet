@@ -1,95 +1,81 @@
-import Image from 'next/image'
+'use client';
 import styles from './page.module.css'
+import { useEffect,useState } from 'react';
+import { ethers } from "ethers";
+import ABI from "./721Abi.json";
+const  getTrustWalletFromWindow = ()=> {
+  // return window.ethereum;
+  const isTrustWallet = (ethereum) => {
+    // Identify if Trust Wallet injected provider is present.
+    const trustWallet = !!ethereum.isTrust;
+
+    return trustWallet;
+  };
+
+  const injectedProviderExist =
+    typeof window !== "undefined" && typeof window.ethereum !== "undefined";
+
+  if (!injectedProviderExist) {
+    return null;
+  }
+
+  if (isTrustWallet(window.ethereum)) {
+    return window.ethereum;
+  }
+
+  if (window.ethereum?.providers){
+    return window.ethereum.providers.find(isTrustWallet) ?? null;
+  }
+
+  return window["trustwallet"] ?? null;
+}
+
 
 export default function Home() {
+  const [provider, setProvider] = useState(null);
+  const [account, setAccount] = useState(null);
+
+  useEffect(()=>{
+    let provider = getTrustWalletFromWindow();
+    setProvider(provider);
+  },[])
+
+  const connect =async ()=>{
+    try {
+      const account = await provider.request({
+        method: "eth_requestAccounts",
+      });
+     
+      console.log(account); // => ['0x...']
+      setAccount(account[0]);
+    } catch (e) {
+      if (e.code === 4001) {
+        console.error("User denied connection.");
+      }
+    }
+  }
+  const approve = async()=>{
+  
+    const ethersProvider = new ethers.providers.Web3Provider(provider);
+    const signer = ethersProvider.getSigner();
+    let _token = "0xf7497304AC73c1A52d10f719dd27580a0Db7F932"
+    const contract = new ethers.Contract(_token, ABI, signer);
+    let res =  contract.approve('0x15051107651f3420144d3a2412d49402c2FAc3C0',18970240857 );
+    console.log('res: ',res);
+
+  }
   return (
     <main className={styles.main}>
-      <div className={styles.description}>
-        <p>
-          Get started by editing&nbsp;
-          <code className={styles.code}>src/app/page.js</code>
-        </p>
-        <div>
-          <a
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
-      </div>
+       <div onClick={()=>{
+        connect();
+       }}>connect trust wallet</div>
 
-      <div className={styles.center}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
+      <div onClick={()=>{
+        approve();
+       }}>test approve</div>
 
-      <div className={styles.grid}>
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Docs <span>-&gt;</span>
-          </h2>
-          <p>Find in-depth information about Next.js features and API.</p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Learn <span>-&gt;</span>
-          </h2>
-          <p>Learn about Next.js in an interactive course with&nbsp;quizzes!</p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Templates <span>-&gt;</span>
-          </h2>
-          <p>Explore the Next.js 13 playground.</p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Deploy <span>-&gt;</span>
-          </h2>
-          <p>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
+       <div>{account}</div>
+      
     </main>
   )
 }
